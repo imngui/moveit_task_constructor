@@ -2,7 +2,8 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import ExecuteProcess
+from launch.actions import ExecuteProcess, RegisterEventHandler
+from launch.event_handlers import OnProcessExit
 from launch_ros.actions import Node
 from moveit_configs_utils import MoveItConfigsBuilder
 
@@ -12,7 +13,13 @@ def generate_launch_description():
         MoveItConfigsBuilder("moveit_resources_panda")
         .planning_pipelines(pipelines=["ompl"])
         .robot_description(file_path="config/panda.urdf.xacro")
-        .trajectory_execution(file_path="config/gripper_moveit_controllers.yaml")
+        .trajectory_execution(
+            file_path=os.path.join(
+                get_package_share_directory("moveit_task_constructor_demo"),
+                "config",
+                "gripper_moveit_controllers.yaml",
+            )
+        )
         .to_moveit_configs()
     )
 
@@ -93,13 +100,23 @@ def generate_launch_description():
             )
         ]
 
+    # Start move_group only after all controllers are active so that the
+    # GripperControllerHandle connects to panda_hand_controller/gripper_cmd
+    # successfully (the handle does not reconnect after a failed initial attempt).
+    move_group_after_controllers = RegisterEventHandler(
+        OnProcessExit(
+            target_action=load_controllers[-1],
+            on_exit=[run_move_group_node],
+        )
+    )
+
     return LaunchDescription(
         [
             rviz_node,
             static_tf,
             robot_state_publisher,
-            run_move_group_node,
             ros2_control_node,
+            move_group_after_controllers,
         ]
         + load_controllers
     )

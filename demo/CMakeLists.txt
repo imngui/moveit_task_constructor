@@ -54,7 +54,33 @@ demo(pick_place_demo)
 target_link_libraries(${PROJECT_NAME}_pick_place_task pick_place_demo_parameters)
 target_link_libraries(${PROJECT_NAME}_pick_place_demo ${PROJECT_NAME}_pick_place_task)
 
+# Dynamic pick-and-place: task class that accepts object_id and place_pose at runtime
+add_library(${PROJECT_NAME}_pick_place_task_dynamic SHARED src/pick_place_task_dynamic.cpp)
+target_link_libraries(${PROJECT_NAME}_pick_place_task_dynamic
+	${moveit_task_constructor_core_TARGETS}
+	pick_place_demo_parameters)
+install(TARGETS ${PROJECT_NAME}_pick_place_task_dynamic
+	ARCHIVE DESTINATION lib
+	LIBRARY DESTINATION lib
+	RUNTIME DESTINATION lib/${PROJECT_NAME})
+
+# Subscriber node: queues /pick_place_task messages and processes them serially
+add_executable(${PROJECT_NAME}_pick_place_dynamic_demo src/pick_place_dynamic_demo.cpp)
+target_link_libraries(${PROJECT_NAME}_pick_place_dynamic_demo
+	${moveit_task_constructor_core_TARGETS}
+	${moveit_task_constructor_msgs_TARGETS}
+	${PROJECT_NAME}_pick_place_task
+	${PROJECT_NAME}_pick_place_task_dynamic
+	pick_place_demo_parameters)
+set_target_properties(${PROJECT_NAME}_pick_place_dynamic_demo PROPERTIES
+	OUTPUT_NAME pick_place_dynamic_demo PREFIX "")
+install(TARGETS ${PROJECT_NAME}_pick_place_dynamic_demo
+	ARCHIVE DESTINATION lib
+	LIBRARY DESTINATION lib
+	RUNTIME DESTINATION lib/${PROJECT_NAME})
+
 install(PROGRAMS
+        scripts/test_pick_place_dynamic.py
         scripts/alternatives.py
         scripts/cartesian.py
         scripts/compute_ik.py
