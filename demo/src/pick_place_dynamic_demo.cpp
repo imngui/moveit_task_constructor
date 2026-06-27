@@ -81,9 +81,6 @@ int main(int argc, char** argv) {
 	const auto param_listener = std::make_shared<pick_place_task_demo::ParamListener>(node);
 	const auto params = param_listener->get_params();
 
-	// Spawn the initial scene (table + object) once
-	moveit_task_constructor_demo::setupDemoScene(params);
-
 	// Task queue shared between the ROS spinning thread and the main thread
 	std::queue<moveit_task_constructor_msgs::msg::PickPlaceTask> task_queue;
 	std::mutex queue_mutex;
