@@ -20,10 +20,6 @@ find_package(tf2_eigen REQUIRED)
 
 add_library(${PROJECT_NAME}_pick_place_task SHARED src/pick_place_task.cpp)
 target_link_libraries(${PROJECT_NAME}_pick_place_task ${moveit_task_constructor_core_TARGETS})
-install(TARGETS ${PROJECT_NAME}_pick_place_task
-	ARCHIVE DESTINATION lib
-	LIBRARY DESTINATION lib
-	RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 include_directories(include)
 
@@ -59,10 +55,20 @@ add_library(${PROJECT_NAME}_pick_place_task_dynamic SHARED src/pick_place_task_d
 target_link_libraries(${PROJECT_NAME}_pick_place_task_dynamic
 	${moveit_task_constructor_core_TARGETS}
 	pick_place_demo_parameters)
-install(TARGETS ${PROJECT_NAME}_pick_place_task_dynamic
+target_include_directories(${PROJECT_NAME}_pick_place_task_dynamic PUBLIC
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+	$<INSTALL_INTERFACE:include>)
+# Exported so other packages (e.g. an action server) can link the dynamic task.
+target_include_directories(${PROJECT_NAME}_pick_place_task PUBLIC
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+	$<INSTALL_INTERFACE:include>)
+install(TARGETS ${PROJECT_NAME}_pick_place_task_dynamic ${PROJECT_NAME}_pick_place_task pick_place_demo_parameters
+	EXPORT ${PROJECT_NAME}Targets
 	ARCHIVE DESTINATION lib
 	LIBRARY DESTINATION lib
-	RUNTIME DESTINATION lib/${PROJECT_NAME})
+	RUNTIME DESTINATION lib/${PROJECT_NAME}
+	INCLUDES DESTINATION include)
+install(DIRECTORY include/ DESTINATION include)
 
 # Subscriber node: queues /pick_place_task messages and processes them serially
 add_executable(${PROJECT_NAME}_pick_place_dynamic_demo src/pick_place_dynamic_demo.cpp)
@@ -103,5 +109,8 @@ install(DIRECTORY launch config
 
 # TODO: Port tests
 # add_subdirectory(test)
+
+ament_export_targets(${PROJECT_NAME}Targets HAS_LIBRARY_TARGET)
+ament_export_dependencies(moveit_task_constructor_core moveit_task_constructor_msgs rclcpp generate_parameter_library)
 
 ament_package()

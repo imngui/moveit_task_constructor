@@ -49,7 +49,8 @@ Eigen::Isometry3d vectorToEigen(const std::vector<double>& values) {
 
 namespace moveit_task_constructor_demo {
 
-PickPlaceTaskDynamic::PickPlaceTaskDynamic(const std::string& task_name) : task_name_(task_name) {}
+PickPlaceTaskDynamic::PickPlaceTaskDynamic(const std::string& task_name, const std::string& ns)
+  : task_name_(task_name), ns_(ns) {}
 
 bool PickPlaceTaskDynamic::init(const rclcpp::Node::SharedPtr& node,
                                 const pick_place_task_demo::Params& params,
@@ -60,7 +61,7 @@ bool PickPlaceTaskDynamic::init(const rclcpp::Node::SharedPtr& node,
 	// Destroy the previous task before constructing the new one so that the
 	// introspection node sends a reset message to RViz first.
 	task_.reset();
-	task_.reset(new moveit::task_constructor::Task());
+	task_.reset(new moveit::task_constructor::Task(ns_));
 
 	Task& t = *task_;
 	t.stages()->setName(task_name_);
@@ -329,6 +330,31 @@ bool PickPlaceTaskDynamic::plan(const std::size_t max_solutions) {
 bool PickPlaceTaskDynamic::execute() {
 	RCLCPP_INFO(LOGGER, "Executing solution trajectory");
 	moveit_msgs::msg::MoveItErrorCodes result = task_->execute(*task_->solutions().front());
+	if (result.val != moveit_msgs::msg::MoveItErrorCodes::SUCCESS) {
+		RCLCPP_ERROR_STREAM(LOGGER, "Task execution failed and returned: " << result.val);
+		return false;
+	}
+	return true;
+}
+
+SolutionBaseConstPtr PickPlaceTaskDynamic::solution(uint32_t solution_id) const {
+	if (!task_)
+		return nullptr;
+	for (const auto& s : task_->solutions()) {
+		if (task_->introspection().solutionId(*s) == solution_id)
+			return s;
+	}
+	return nullptr;
+}
+
+bool PickPlaceTaskDynamic::execute(uint32_t solution_id) {
+	const SolutionBaseConstPtr s = solution(solution_id);
+	if (!s) {
+		RCLCPP_ERROR(LOGGER, "No solution with id %u", solution_id);
+		return false;
+	}
+	RCLCPP_INFO(LOGGER, "Executing solution %u", solution_id);
+	moveit_msgs::msg::MoveItErrorCodes result = task_->execute(*s);
 	if (result.val != moveit_msgs::msg::MoveItErrorCodes::SUCCESS) {
 		RCLCPP_ERROR_STREAM(LOGGER, "Task execution failed and returned: " << result.val);
 		return false;

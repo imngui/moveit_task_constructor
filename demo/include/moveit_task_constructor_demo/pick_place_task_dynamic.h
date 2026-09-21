@@ -68,7 +68,13 @@ using namespace moveit::task_constructor;
 class PickPlaceTaskDynamic
 {
 public:
-	PickPlaceTaskDynamic(const std::string& task_name);
+	/**
+	 * @param task_name Name of the task's root stage
+	 * @param ns        ROS namespace for introspection topics/services
+	 *                  (e.g. "pick_place" -> /pick_place/description). Empty keeps
+	 *                  the global topics that the default RViz config expects.
+	 */
+	PickPlaceTaskDynamic(const std::string& task_name, const std::string& ns = "");
 	~PickPlaceTaskDynamic() = default;
 
 	/**
@@ -85,10 +91,21 @@ public:
 
 	bool plan(std::size_t max_solutions);
 
+	/// Execute the best (front) solution.
 	bool execute();
+
+	/// Execute the solution with the given introspection id.
+	bool execute(uint32_t solution_id);
+
+	/// The underlying task, or nullptr before the first init(). Replaced on every init().
+	moveit::task_constructor::TaskPtr task() const { return task_; }
+
+	/// Find a top-level solution by its introspection id; nullptr if unknown.
+	moveit::task_constructor::SolutionBaseConstPtr solution(uint32_t solution_id) const;
 
 private:
 	std::string task_name_;
+	std::string ns_;
 	moveit::task_constructor::TaskPtr task_;
 };
 
