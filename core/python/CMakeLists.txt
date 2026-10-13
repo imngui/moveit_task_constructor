@@ -23,6 +23,11 @@ if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/pybind11/CMakeLists.txt")
 endif()
 add_subdirectory(pybind11)
 
+# Find py_binding_tools only AFTER the vendored pybind11 is set up: its config calls
+# find_package(pybind11), which would otherwise import the system pybind11 targets
+# first and make the submodule's add_library(pybind11::... ALIAS) calls fail.
+find_package(py_binding_tools REQUIRED)
+
 # C++ wrapper code
 add_subdirectory(bindings)
 
