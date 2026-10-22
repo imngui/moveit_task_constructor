@@ -258,7 +258,10 @@ bool PickPlaceTaskDynamic::init(const rclcpp::Node::SharedPtr& node,
 
 			auto wrapper = std::make_unique<stages::ComputeIK>("place pose IK", std::move(stage));
 			wrapper->setMaxIKSolutions(2);
-			wrapper->setIKFrame(vectorToEigen(params.grasp_frame_transform), params.hand_frame);
+			// The IK frame is the attached object itself, so the object lands at the requested pose.
+			// With the hand's grasp frame here instead, the object ended up rotated by the sampled
+			// grasp yaw (15-degree steps) from the pose the user demonstrated.
+			wrapper->setIKFrame(object_id);
 			wrapper->properties().configureInitFrom(Stage::PARENT, { "eef", "group" });
 			wrapper->properties().configureInitFrom(Stage::INTERFACE, { "target_pose" });
 			place->insert(std::move(wrapper));
